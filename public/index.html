@@ -1,0 +1,54 @@
+<html>
+  <head>
+    <title>Real-time web app</title>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script src="//www.polymer-project.org/0.5/components/webcomponentsjs/webcomponents.min.js"></script>
+    <link rel="import" href="//www.polymer-project.org/0.5/components/polymer/polymer.html">
+  </head>
+  <body>
+
+    <template id="todo" is="auto-binding">
+      <template repeat="{{item in list}}">
+        <label>
+          <input type="checkbox" on-change="{{check}}" checked="{{item.done}}">
+          {{item.text}}
+        </label><br>
+      </template>
+
+      <input type="text" value="{{newItem}}" placeholder="New Item">
+      <button on-click="{{add}}">Add</button>
+    </template>
+
+    <script>
+      var todo = document.querySelector("#todo");
+      var socket = io.connect();
+
+      todo.add = function() {
+        socket.emit("add", todo.newItem, function(resp) {
+          console.log(resp);
+        });
+      };
+
+      todo.check = function(ev, detail, sender) {
+        var item = ev.target.templateInstance.model.item;
+        socket.emit("done", item.id, sender.checked, function(resp) {
+          console.log(resp);
+        });
+      };
+
+      socket.on("history", function(items) {
+        todo.list = items;
+      });
+
+      socket.on("update", function(data) {
+        if (data.new_val && !data.old_val)
+          return todo.list.push(data.new_val);
+
+        for (var item in todo.list)
+          if (todo.list[item].id === data.old_val.id)
+            return todo.list[item] = data.new_val;
+      });
+    </script>
+
+  </body>
+</html>
